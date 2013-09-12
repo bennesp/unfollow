@@ -19,15 +19,15 @@ def settings
     File.open("settings.rb", "w") do |f|
       f.puts "@ck = \"#{@ck}\""
       f.puts "@cs = \"#{@cs}\""
+      f.puts "@f = \".tokens\"\n@DEBUG = true\n@WARNINGS = true\n@ERRORS = true"
     end
+    @f = ".tokens"
+    @DEBUG = true
+    @WARNINGS = true
+    @ERRORS = true
     d "Saved."
   end
 end
-
-@f = ".tokens"
-@DEBUG = true
-@WARNINGS = true
-@ERRORS = true
 
 # Variabili gloabli
 @friends_ids = []
@@ -67,9 +67,9 @@ def auth_tokens
   rescue OAuth::Unauthorized
     puts "PIN wrong. Please, insert the PIN from #{request_token.authorize_url} (or press CTRL+C to end"
     retry
-  rescue SystemExit
-    puts "App ended"
-    raise SystemExit
+  rescue Interrupt
+    puts "Bye!"
+    exit
   end
 
   @ot=access_token.token
