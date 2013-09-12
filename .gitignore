@@ -16,3 +16,10 @@ tmp
 .yardoc
 _yardoc
 doc/
+
+# Aggiunte da me
+whitelist
+settings.rb
+friendsIDs
+followersIDs
+.tokens
