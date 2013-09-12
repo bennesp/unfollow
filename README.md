@@ -14,8 +14,13 @@ Script is very configurable, you can modify your settings in settings.rb to:
 * hide debug information
 * hide warnings information
 * hide errors information
-* change tokens file
+
 * change consumer public and secret keys
+* change tokens file name
+
+* change cacheTime, interval of cache validity
+* change friendsIDs cached file name
+* change followersIDs cached file name
 
 How to start? (Ruby and Needed Gems Installation)
 ---

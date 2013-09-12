@@ -4,45 +4,7 @@ require 'rubygems'
 require 'oauth'
 require 'twitter'
 
-# Impostazioni
-def settings
-  begin
-    require 'settings'
-    d "'settings.rb' loaded"
-  rescue LoadError=>e
-    w "'settings.rb' not found: asking user for creation"
-    puts "This must be your first start, please, insert your consumer key:"
-    @ck=gets.chomp
-    puts "And your consumer secret key:"
-    @cs=gets.chomp
-    d "Got ck and cs. Saving..."
-    File.open("settings.rb", "w") do |f|
-      f.puts "@ck = \"#{@ck}\""
-      f.puts "@cs = \"#{@cs}\""
-      f.puts "@f = \".tokens\"\n@DEBUG = true\n@WARNINGS = true\n@ERRORS = true"
-    end
-    @f = ".tokens"
-    @DEBUG = true
-    @WARNINGS = true
-    @ERRORS = true
-    d "Saved."
-  end
-end
-
-# Variabili gloabli
-@friends_ids = []
-@followers_ids = []
-@to_remove = []
-@colors = {:white=>"\e[0;37m", :red=>"\e[0;31m", :blue=>"\e[0;36m", :yellow=>"\e[0;33m"}
-@lastop = Time.now
-
-def start
-  if File.exist?@f then
-    load_ot_os
-  else
-    auth_tokens
-  end
-end
+@colors = {}
 
 def d s
   puts "#{@colors[:blue]}[D] "+s.to_s+"#{@colors[:white]}" if @DEBUG
@@ -54,6 +16,56 @@ end
 
 def e s
   puts "#{@colors[:red]}[E] "+s.to_s+"#{@colors[:white]}" if @ERRORS or @WARNINGS or @DEBUG
+end
+
+# Impostazioni
+def settings
+  begin
+    require 'settings'
+    if(@use_colors) then
+      d "Using Colors"
+      @colors = {:white=>"\e[0;37m", :red=>"\e[0;31m", :blue=>"\e[0;36m", :yellow=>"\e[0;33m"}
+    else
+      d "No Colors"
+      @colors = {:white=>"", :red=>"", :blue=>"", :yellow=>""}
+    end
+    d "'settings.rb' loaded"
+  rescue LoadError=>e
+    w "'settings.rb' not found: asking user for creation"
+    puts "This must be your first start, please, insert your consumer key:"
+    @ck=gets.chomp
+    puts "And your consumer secret key:"
+    @cs=gets.chomp
+    d "Got ck and cs. Saving..."
+    File.open("settings.rb", "w") do |f|
+      f.puts "@ck = \"#{@ck}\""
+      f.puts "@cs = \"#{@cs}\""
+      f.puts "@f = \".tokens\"\n@friendsIDsFile = \"friendsIDs\"\n@followersIDsFile = \"followersIDs\"\n@cache = true\n@cache_time = 600\n@use_colors = true\n@DEBUG = true\n@WARNINGS = true\n@ERRORS = true"
+    end
+    # DO NOT EDIT THIS! EDIT THE settings.rb created automatically at the first run!!!
+    @f = ".tokens"
+    @friendsIDsFile = "friendsIDs"
+    @followersIDsFile = "followersIDs"
+    @cache = true
+    @cache_time = 600
+    @use_colors = true
+    @DEBUG = true
+    @WARNINGS = true
+    @ERRORS = true
+    d "Settings saved."
+  end
+end
+
+@friends_ids = []
+@followers_ids = []
+@to_remove = []
+
+def start
+  if File.exist?@f then
+    load_ot_os
+  else
+    auth_tokens
+  end
 end
 
 def auth_tokens
@@ -133,10 +145,14 @@ def get_friends_ids
     @friends_ids = @friends_ids.concat c.all
   end while c.next_cursor!=0
   d "Got all the #{@friends_ids.length} Friends IDs"
-  File.open "friendsIDs", "w" do
-    |file| file.puts YAML::dump @friends_ids
+  if(@cache) then
+    File.open @friendsIDsFile, "w" do |file|
+      file.puts YAML::dump [Time.now, @friends_ids]
+    end
+    d "Info Saved in #{@friendsIDsFile}"
+  else
+    d "Info not saved, cache disabled in 'settings.rb'"
   end
-  d "Info Saved"
 end
 
 def get_followers_ids
@@ -148,40 +164,58 @@ def get_followers_ids
     @followers_ids = @followers_ids.concat c.all
   end while c.next_cursor!=0
   d "Got all the #{@followers_ids.length} Followers IDs. Saving..."
-  File.open "followersIDs", "w" do
-    |file| file.puts YAML::dump @followers_ids
+  if(@cache) then
+    File.open @followersIDsFile, "w" do |fi|
+      fi.puts YAML::dump [Time.now, @followers_ids]
+    end
+    d "Info Saved in #{@followersIDsFile}"
+  else
+    d "Info not saved, cache disabled in 'settings.rb'"
   end
-  d "Info Saved"
 end
 
 def load_friends_ids
-  File.open "friendsIDs", "r" do
-    |file| @friends_ids = YAML::load(file.read)
+  File.open @friendsIDsFile, "r" do
+    |file| @friends_ids = YAML::load(file.read)[1]
   end
   d "Loaded #{@friends_ids.length} friends from file"
 end
 
-def check_friends
-  if(File.exists?"friendsIDs")==false then
+def get_ids of_which
+  if(of_which=="friends") then
     get_friends_ids
+  elsif(of_which=="followers") then
+     get_followers_ids
   else
-    load_friends_ids
+    e "get_ids called with a strange parameter: '#{of_which}'"
+  end
+end
+
+# if fr is "fr" then retrieve friends, else followers
+def check_cache fi, fr
+  if(@cache==false) then
+    get_ids fr
+    return
+  end
+  if(File.exists? fi)==false then
+    get_ids fr
+  else
+    date=0
+    date=YAML.load_file(fi)[0]
+    if (Time.now-date>@cache_time) then
+      d "Cache copy of '#{fi}' expired #{(Time.now-date).to_i} seconds ago"
+      get_ids fr
+    else
+       if(fr=="friends") then load_friends_ids else load_followers_ids end
+    end
   end
 end
 
 def load_followers_ids
-  File.open "followersIDs", "r" do
-    |file| @followers_ids = YAML::load(file.read)
+  File.open @followersIDsFile, "r" do
+    |file| @followers_ids = YAML::load(file.read)[1]
   end
   d "Loaded #{@followers_ids.length} followers from file"
-end
-
-def check_followers
-  if(File.exists?"followersIDs")==false then
-    get_followers_ids
-  else
-    load_followers_ids
-  end
 end
 
 def which_remove
@@ -250,8 +284,8 @@ begin
   settings
   start
   config
-  check_friends
-  check_followers
+  check_cache @friendsIDsFile, "friends"
+  check_cache @followersIDsFile, "followers"
   remove
 rescue Twitter::Error::TooManyRequests=>ex
   e ex.message
