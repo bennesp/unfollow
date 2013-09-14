@@ -7,15 +7,15 @@ require 'twitter'
 @colors = {}
 
 def d s
-  puts "#{@colors[:blue]}[D] "+s.to_s+"#{@colors[:white]}" if @DEBUG
+  puts "\r#{@colors[:blue]}[D] "+s.to_s+"#{@colors[:white]}" if @DEBUG
 end
 
 def w s
-  puts "#{@colors[:yellow]}[W] "+s.to_s+"#{@colors[:white]}" if @WARNINGS or @DEBUG
+  puts "\r#{@colors[:yellow]}[W] "+s.to_s+"#{@colors[:white]}" if @WARNINGS or @DEBUG
 end
 
 def e s
-  puts "#{@colors[:red]}[E] "+s.to_s+"#{@colors[:white]}" if @ERRORS or @WARNINGS or @DEBUG
+  puts "\r#{@colors[:red]}[E] "+s.to_s+"#{@colors[:white]}" if @ERRORS or @WARNINGS or @DEBUG
 end
 
 # Impostazioni
@@ -37,30 +37,21 @@ def settings
     puts "And your consumer secret key:"
     @cs=gets.chomp
     d "Got ck and cs. Saving..."
-    File.open("settings.rb", "w") do |f|
+    File.open "settings.rb", "w" do |f|
       f.puts "@ck = \"#{@ck}\""
       f.puts "@cs = \"#{@cs}\""
-      f.puts "@f = \".tokens\"\n@friendsIDsFile = \"friendsIDs\"\n@followersIDsFile = \"followersIDs\"\n@cache = true\n@cache_time = 600\n@use_colors = true\n@DEBUG = true\n@WARNINGS = true\n@ERRORS = true"
+      f.puts "@f = \".tokens\"\n\n@dataFile = \"data\"\n@cache = true\n@cache_time = 600\n\n@use_colors = true\n@track_unfollower = true\n\n@DEBUG = true\n@WARNINGS = true\n@ERRORS = true\n\n# change these with your whitelisted users\n@whitelist = [\"alecover\", \"marcobianchiweb\"]"
     end
-    # DO NOT EDIT THIS! EDIT THE settings.rb created automatically at the first run!!!
-    @f = ".tokens"
-    @friendsIDsFile = "friendsIDs"
-    @followersIDsFile = "followersIDs"
-    @cache = true
-    @cache_time = 600
-    @use_colors = true
-    @DEBUG = true
-    @WARNINGS = true
-    @ERRORS = true
     d "Settings saved."
+    require "settings.rb"
+    d "Settings loaded."
   end
 end
 
-@friends_ids = []
-@followers_ids = []
-@to_remove = []
-
 def start
+  @friends_ids = []
+  @followers_ids = []
+  @to_remove = []
   if File.exist?@f then
     load_ot_os
   else
@@ -86,7 +77,7 @@ def auth_tokens
 
   @ot=access_token.token
   @os=access_token.secret
-  save
+  save_tokens
   d "Authenticated"
 end
 
@@ -100,28 +91,24 @@ def auth_base
   Twitter::Client.new(:username => u, :password => p)
 end
 
-def save
+def save_tokens
   d "Saving Tokens"
-  f = File.open @f, "w"
-  f.puts YAML::dump @ot.to_s
-  f.puts YAML::dump @os.to_s
-  f.close
+  oar = [@ot.to_s,@os.to_s]
+  File.open @f, "w" do |f|
+    f.puts YAML::dump(oar)
+  end
   d "Token saved"
 end
 
 def load_ot_os
   d "Tokens found in "+@f
-  oar = []
-  f = File.open(@f, "r").each do |o|
-    oar << YAML::load(o)
-  end
+  oar = YAML.load_file(@f)
   @ot=oar[0]
   @os=oar[1]
-  f.close
   d "Loaded Oauth Token and Oauth Secret Token"
 end
 
-def config
+def config_twitter
   d "Configuring Twitter..."
   Twitter.configure do |config|
     config.consumer_key = @ck
@@ -145,14 +132,6 @@ def get_friends_ids
     @friends_ids = @friends_ids.concat c.all
   end while c.next_cursor!=0
   d "Got all the #{@friends_ids.length} Friends IDs"
-  if(@cache) then
-    File.open @friendsIDsFile, "w" do |file|
-      file.puts YAML::dump [Time.now, @friends_ids]
-    end
-    d "Info Saved in #{@friendsIDsFile}"
-  else
-    d "Info not saved, cache disabled in 'settings.rb'"
-  end
 end
 
 def get_followers_ids
@@ -163,59 +142,64 @@ def get_followers_ids
     @lastop=Time.now
     @followers_ids = @followers_ids.concat c.all
   end while c.next_cursor!=0
-  d "Got all the #{@followers_ids.length} Followers IDs. Saving..."
-  if(@cache) then
-    File.open @followersIDsFile, "w" do |fi|
-      fi.puts YAML::dump [Time.now, @followers_ids]
-    end
-    d "Info Saved in #{@followersIDsFile}"
-  else
-    d "Info not saved, cache disabled in 'settings.rb'"
-  end
+  d "Got all the #{@followers_ids.length} Followers IDs"
 end
 
 def load_friends_ids
-  File.open @friendsIDsFile, "r" do
-    |file| @friends_ids = YAML::load(file.read)[1]
-  end
+  @friends_ids = YAML.load_file(@dataFile)[:friends][1]
   d "Loaded #{@friends_ids.length} friends from file"
+end
+
+def load_followers_ids
+  @followers_ids = YAML.load_file(@dataFile)[:followers][1]
+  d "Loaded #{@followers_ids.length} followers from file"
 end
 
 def get_ids of_which
   if(of_which=="friends") then
     get_friends_ids
   elsif(of_which=="followers") then
-     get_followers_ids
+    get_followers_ids
   else
     e "get_ids called with a strange parameter: '#{of_which}'"
   end
 end
 
+def time2ago t
+  s=""
+  if t>=86400 then
+    s+=(t/86400).to_i.to_s+" days "
+  end
+  if t%86400>3600 then
+    s+=((t%86400)/3600).to_i.to_s+" hours "
+  end
+  if (t%86400%3600)>60 then
+    s+=((t%86400%3600)/60).to_i.to_s+" minutes "
+  end
+  if (t%86400%3600%60)!=0 then
+    s+=(t%86400%3600%60).to_i.to_s+" seconds "
+  end
+  return s.chop
+end
+
 # if fr is "fr" then retrieve friends, else followers
-def check_cache fi, fr
+def check_cache fr
   if(@cache==false) then
+    d "Cache disabled. Getting new data."
     get_ids fr
     return
   end
-  if(File.exists? fi)==false then
+  if(File.exists?@dataFile)==false then
     get_ids fr
   else
-    date=0
-    date=YAML.load_file(fi)[0]
-    if (Time.now-date>@cache_time) then
-      d "Cache copy of '#{fi}' expired #{(Time.now-date).to_i} seconds ago"
+    date=YAML.load_file(@dataFile)[fr.to_sym][0]
+    if ((Time.now-date)>@cache_time) then
+      d "Cache copy of '#{fi}' expired #{time2ago(Time.now-date)} ago"
       get_ids fr
     else
        if(fr=="friends") then load_friends_ids else load_followers_ids end
     end
   end
-end
-
-def load_followers_ids
-  File.open @followersIDsFile, "r" do
-    |file| @followers_ids = YAML::load(file.read)[1]
-  end
-  d "Loaded #{@followers_ids.length} followers from file"
 end
 
 def which_remove
@@ -246,19 +230,18 @@ def filter users
   d "Filtered #{users.length-temp.length} users beacuse verified"
   # With WhiteList
   d "Loading Whitelist..."
-  if(File.exists?"whitelist") then
-    whitelist = YAML::load(File.open("whitelist", "r").read)
-    d "Whitelist loaded with #{whitelist.length} rules. Filtering with WhiteList..."
+  if(@whitelist.length!=0) then
+    d "Whitelist loaded with #{@whitelist.length} rules. Filtering with WhiteList..."
     tr=[]
     temp.each do |t|
-      if whitelist.index(t.screen_name)==nil
+      if @whitelist.index(t.screen_name)==nil
         tr<<t
       end
     end
     d "Filtered #{temp.length-tr.length} users because whitelisted"
     return tr
   else
-    w "'whitelist' file not found. avoiding it."
+    w "'whitelist' settings empty. avoiding it."
     return temp
   end
 end
@@ -280,25 +263,64 @@ def remove
   d "Done."
 end
 
+def track_unfollowers
+  if @cache==false then
+    w "Cannot track future unfollowers: cache disabled"
+  end
+  if (File.exists?@dataFile)==false then
+    w "Cannot track unfollowers: '#{@dataFile}' doesn't exist. Maybe first run?"
+    return
+  end
+  unfollowers_ids = []
+  YAML.load_file(@dataFile)[:followers][1].each do |f|
+    if @followers_ids.index(f)==nil then
+      unfollowers_ids << f
+    end
+  end
+  d "Found #{unfollowers_ids.length} unfollowers."
+  return unfollowers_ids
+end
+
+def save_data ar
+  if(@cache) then
+    File.open @dataFile, "w" do |fi|
+      fi.puts YAML::dump ar
+    end
+    d "Info Saved in #{@dataFile}"
+  else
+    d "Info not saved, cache disabled in 'settings.rb'"
+  end
+end
+
+def track_all
+  fo = [Time.now, @followers_ids]
+  fr = [Time.now, @friends_ids]
+  un = track_unfollowers
+  
+  save_data({:followers=>fo, :friends=>fr, :unfollowers=>un})
+end
+
 begin
-  settings
-  start
-  config
-  check_cache @friendsIDsFile, "friends"
-  check_cache @followersIDsFile, "followers"
-  remove
-rescue Twitter::Error::TooManyRequests=>ex
-  e ex.message
-  d "Sleeping for 20 seconds..."
-  sleep 20
-  retry
-rescue Twitter::Error::ClientError=>ex
-  e ex.message
-  d "Sleeping for 5 seconds..."
-  sleep 5
-  retry
+  begin
+    settings
+    start
+    config_twitter
+    check_cache "friends"
+    check_cache "followers"
+    track_all
+    remove
+  rescue Twitter::Error::TooManyRequests=>ex
+    e ex.message
+    d "Sleeping for 20 seconds..."
+    sleep 20
+    retry
+  rescue Twitter::Error::ClientError=>ex
+    e ex.message
+    d "Sleeping for 5 seconds..."
+    sleep 5
+    retry
+  end
 rescue Interrupt=>ex
   w "Pressed CTRL+C . Bye!"
   exit
 end
-
