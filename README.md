@@ -9,16 +9,29 @@ It unfollow on Twitter all people aren't following you, except for
 *   Verfied Accounts
 *   Whitelisted Users in 'whitelist' file
 
-Script is very configurable, you can modify your settings in settings.rb to:
+And can track who has unfollowed you.
 
-* hide debug information
-* hide warnings information
-* hide errors information
-* change consumer public and secret keys
-* change tokens file name
-* change cacheTime, interval of cache validity
-* change friendsIDs cached file name
-* change followersIDs cached file name
+Script is very configurable, this is a default example of a settings.rb:
+```
+@ck = "consumer_key"
+@cs = "consumer_secret_key"
+@f = ".tokens"
+
+@dataFile = "data"
+@cache = true
+@cache_time = 600
+
+@use_colors = true
+@track_unfollower = true
+
+@DEBUG = true
+@WARNINGS = true
+@ERRORS = true
+
+# change these with your whitelisted users
+@whitelist = ["alecover", "marcobianchiweb"]
+```
+
 
 How to start? (Ruby and Needed Gems Installation)
 ---
