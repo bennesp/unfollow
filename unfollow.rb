@@ -6,29 +6,33 @@ require 'twitter'
 
 @colors = {}
 
+def load_colors
+  if(@use_colors) then
+    d "Using Colors"
+    @colors = {:white=>"\e[0;37m", :red=>"\e[0;31m", :blue=>"\e[0;36m", :yellow=>"\e[0;33m"}
+  else
+    d "No Colors"
+    @colors = {:white=>"", :red=>"", :blue=>"", :yellow=>""}
+  end
+end
+
 def d s
-  puts "\r#{@colors[:blue]}[D] "+s.to_s+"#{@colors[:white]}" if @DEBUG
+  puts "\r#{@colors[:blue]}[D] "+s.to_s+"#{@colors[:white]}" if @verbose.to_i>2
 end
 
 def w s
-  puts "\r#{@colors[:yellow]}[W] "+s.to_s+"#{@colors[:white]}" if @WARNINGS or @DEBUG
+  puts "\r#{@colors[:yellow]}[W] "+s.to_s+"#{@colors[:white]}" if @verbose.to_i>1
 end
 
 def e s
-  puts "\r#{@colors[:red]}[E] "+s.to_s+"#{@colors[:white]}" if @ERRORS or @WARNINGS or @DEBUG
+  puts "\r#{@colors[:red]}[E] "+s.to_s+"#{@colors[:white]}" if @verbose.to_i>0
 end
 
 # Impostazioni
 def settings
   begin
     require 'settings'
-    if(@use_colors) then
-      d "Using Colors"
-      @colors = {:white=>"\e[0;37m", :red=>"\e[0;31m", :blue=>"\e[0;36m", :yellow=>"\e[0;33m"}
-    else
-      d "No Colors"
-      @colors = {:white=>"", :red=>"", :blue=>"", :yellow=>""}
-    end
+    load_colors
     d "'settings.rb' loaded"
   rescue LoadError=>e
     w "'settings.rb' not found: asking user for creation"
@@ -40,10 +44,11 @@ def settings
     File.open "settings.rb", "w" do |f|
       f.puts "@ck = \"#{@ck}\""
       f.puts "@cs = \"#{@cs}\""
-      f.puts "@f = \".tokens\"\n\n@dataFile = \"data\"\n@cache = true\n@cache_time = 600\n\n@use_colors = true\n@track_unfollower = true\n\n@DEBUG = true\n@WARNINGS = true\n@ERRORS = true\n\n# change these with your whitelisted users\n@whitelist = [\"alecover\", \"marcobianchiweb\"]"
+      f.puts "@f = \".tokens\"\n\n@dataFile = \"data\"\n@cache = true\n@cache_time = 600\n@statsFile = \"stats.yaml\"\n\n@use_colors = true\n@track_unfollower = true\n\n# 0=quite,1=errors,2=warnings,3=debugs\n@verbose = 3\n\n# change these with your whitelisted users\n@whitelist = [\"alecover\", \"marcobianchiweb\"]"
     end
     d "Settings saved."
     require "settings.rb"
+    load_colors
     d "Settings loaded."
   end
 end
@@ -146,12 +151,12 @@ def get_followers_ids
 end
 
 def load_friends_ids
-  @friends_ids = YAML.load_file(@dataFile)[:friends][1]
+  @friends_ids = YAML.load_file(@dataFile)[1][:friends]
   d "Loaded #{@friends_ids.length} friends from file"
 end
 
 def load_followers_ids
-  @followers_ids = YAML.load_file(@dataFile)[:followers][1]
+  @followers_ids = YAML.load_file(@dataFile)[1][:followers]
   d "Loaded #{@followers_ids.length} followers from file"
 end
 
@@ -162,6 +167,17 @@ def get_ids of_which
     get_followers_ids
   else
     e "get_ids called with a strange parameter: '#{of_which}'"
+  end
+end
+
+def load_old_data
+  if File.exists?@dataFile then
+    data = YAML.load_file(@dataFile)[1]
+    @old_fo_n = data[:followers].length
+    @old_fr_n = data[:friends].length
+  else
+    @old_fo_n = 0
+    @old_fr_n = 0
   end
 end
 
@@ -192,9 +208,9 @@ def check_cache fr
   if(File.exists?@dataFile)==false then
     get_ids fr
   else
-    date=YAML.load_file(@dataFile)[fr.to_sym][0]
+    date=YAML.load_file(@dataFile)[0]
     if ((Time.now-date)>@cache_time) then
-      d "Cache copy of '#{fi}' expired #{time2ago(Time.now-date)} ago"
+      d "Cache copy of '#{@dataFile}' expired #{time2ago(Time.now-date)} ago"
       get_ids fr
     else
        if(fr=="friends") then load_friends_ids else load_followers_ids end
@@ -272,7 +288,7 @@ def track_unfollowers
     return
   end
   unfollowers_ids = []
-  YAML.load_file(@dataFile)[:followers][1].each do |f|
+  YAML.load_file(@dataFile)[1][:followers].each do |f|
     if @followers_ids.index(f)==nil then
       unfollowers_ids << f
     end
@@ -292,12 +308,21 @@ def save_data ar
   end
 end
 
+def save_stats ar
+  if(@stats) then
+    File.open @statsFile, "r+" do |fi|
+      fi.read
+      fi.puts YAML::dump ar
+    end
+  end
+end
+
 def track_all
-  fo = [Time.now, @followers_ids]
-  fr = [Time.now, @friends_ids]
+  fo = @followers_ids
+  fr = @friends_ids
   un = track_unfollowers
-  
-  save_data({:followers=>fo, :friends=>fr, :unfollowers=>un})
+  save_data([Time.now, {:followers=>fo, :friends=>fr, :unfollowers=>un}])
+  save_stats([Time.now, {:followers=>(fo.length-@old_fo_n), :friends=>(fr.length-@old_fr_n), :unfollowers=>un.length}])
 end
 
 begin
@@ -305,6 +330,7 @@ begin
     settings
     start
     config_twitter
+    load_old_data
     check_cache "friends"
     check_cache "followers"
     track_all

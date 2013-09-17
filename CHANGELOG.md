@@ -1,3 +1,9 @@
+0.3.1b
+---
+
+* No more @DEBUG, @WARNINGS, @ERRORS, only @verbose
+* Changed another time the data structure file: Time written only 1 time
+
 0.3b
 ---
 
