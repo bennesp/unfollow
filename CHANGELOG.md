@@ -1,10 +1,14 @@
-0.3.1b
+0.4b
 ---
 
-* Tracking of unfollowers also in file
-* No more @DEBUG, @WARNINGS, @ERRORS, only @verbose
+* Tracking of unfollowers also in file and persistent/incrementally
+* Interactive options to see names of unfollowers
 * Changed another time the data structure file: Time written only 1 time
-* Loading Colors imrpoved
+* No more @DEBUG, @WARNINGS, @ERRORS, only @verbose
+* Loading colors improved
+* Bugfix: cache did not disable track of unfollowers
+* Bugfix: on creation of data file it crashed
+* Improved Code adding functions to retrieve info of users and name of users
 
 0.3b
 ---

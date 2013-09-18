@@ -361,6 +361,6 @@ begin
     retry
   end
 rescue Interrupt=>ex
-  w "Pressed CTRL+C (#{ex.message}). Bye!"
+  w "Pressed CTRL+C . Bye!"
   exit
 end
