@@ -1,8 +1,10 @@
 0.3.1b
 ---
 
+* Tracking of unfollowers also in file
 * No more @DEBUG, @WARNINGS, @ERRORS, only @verbose
 * Changed another time the data structure file: Time written only 1 time
+* Loading Colors imrpoved
 
 0.3b
 ---
