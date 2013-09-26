@@ -294,7 +294,6 @@ def track_unfollowers
   end
   unfollowers_ids = YAML.load_file(@dataFile)[1][:unfollowers]
   if(unfollowers_ids==nil) then unfollowers_ids = [] end
-  puts YAML::dump unfollowers_ids
   YAML.load_file(@dataFile)[1][:followers].each do |f|
     if @followers_ids.index(f)==nil then
       unfollowers_ids << f
