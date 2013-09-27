@@ -1,3 +1,9 @@
+0.4.1b
+---
+
+* Fixed bug that shows unfollowers IDs in stdout
+* Fixed bug that made crash the software at the first run
+
 0.4b
 ---
 

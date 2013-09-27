@@ -292,7 +292,7 @@ def track_unfollowers
     w "Cannot track unfollowers: '#{@dataFile}' doesn't exist. Maybe first run?"
     return
   end
-  unfollowers_ids = YAML.load_file(@dataFile)[1][:unfollowers]
+  unfollowers_ids = [] # YAML.load_file(@dataFile)[1][:unfollowers]
   if(unfollowers_ids==nil) then unfollowers_ids = [] end
   YAML.load_file(@dataFile)[1][:followers].each do |f|
     if @followers_ids.index(f)==nil then
@@ -335,7 +335,7 @@ def track_all
   fr = @friends_ids
   un = track_unfollowers
   save_data([Time.now, {:followers=>fo, :friends=>fr, :unfollowers=>un}])
-  save_stats([Time.now, {:followers=>(fo.length-@old_fo_n), :friends=>(fr.length-@old_fr_n), :unfollowers=>un.length}])
+  save_stats([Time.now, {:followers=>(fo.to_a.length-@old_fo_n), :friends=>(fr.to_a.length-@old_fr_n), :unfollowers=>un.to_a.length}])
 end
 
 begin
