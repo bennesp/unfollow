@@ -300,13 +300,6 @@ def track_unfollowers
     end
   end
   d "Found #{unfollowers_ids.length} unfollowers."
-  if unfollowers_ids.length>0 then
-    puts "Show names of #{unfollowers_ids.length} unfollowers? [Yes/No]"
-    g=gets.chomp.downcase
-    if(g=="y" or g=="yes") then
-      puts "(#{name_of get_users_from_ids(unfollowers_ids)})"
-    end
-  end
   return unfollowers_ids
 end
 
@@ -331,11 +324,20 @@ def save_stats ar
 end
 
 def track_all
-  fo = @followers_ids
-  fr = @friends_ids
-  un = track_unfollowers
+  fo = @followers_ids.to_a
+  fr = @friends_ids.to_a
+  un = track_unfollowers().to_a
+  
   save_data([Time.now, {:followers=>fo, :friends=>fr, :unfollowers=>un}])
-  save_stats([Time.now, {:followers=>(fo.to_a.length-@old_fo_n), :friends=>(fr.to_a.length-@old_fr_n), :unfollowers=>un.to_a.length}])
+  save_stats([Time.now, {:followers=>(fo.length-@old_fo_n), :friends=>(fr.length-@old_fr_n), :unfollowers=>un.length}])
+
+  if un.length>0 then
+    puts "Show names of #{un.length} unfollowers? [Yes/No]"
+    g=gets.chomp.downcase
+    if(g=="y" or g=="yes") then
+      puts "(#{name_of get_users_from_ids(un)})"
+    end
+  end
 end
 
 begin
