@@ -4,6 +4,7 @@
 * Fixed bug that shows unfollowers IDs in stdout
 * Fixed bug that made crash the software at the first run
 * Fixed issue: saving after showing unfollowers names, now before
+* Fixed issue: Unfollowers removed like non-followers
 
 0.4b
 ---

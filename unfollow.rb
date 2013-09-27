@@ -57,6 +57,7 @@ def start
   @friends_ids = []
   @followers_ids = []
   @to_remove = []
+  @unfollowers_ids = []
   if File.exist?@f then
     load_ot_os
   else
@@ -224,6 +225,7 @@ def which_remove
       @to_remove << fid
     end
   end
+  @to_remove.concat @unfollowers_ids
 end
 
 def get_users_from_ids ids
@@ -292,15 +294,13 @@ def track_unfollowers
     w "Cannot track unfollowers: '#{@dataFile}' doesn't exist. Maybe first run?"
     return
   end
-  unfollowers_ids = [] # YAML.load_file(@dataFile)[1][:unfollowers]
-  if(unfollowers_ids==nil) then unfollowers_ids = [] end
+  if(@unfollowers_ids==nil) then @unfollowers_ids = [] end
   YAML.load_file(@dataFile)[1][:followers].each do |f|
     if @followers_ids.index(f)==nil then
-      unfollowers_ids << f
+      @unfollowers_ids << f
     end
   end
-  d "Found #{unfollowers_ids.length} unfollowers."
-  return unfollowers_ids
+  d "Found #{@unfollowers_ids.length} unfollowers."
 end
 
 def save_data ar
@@ -324,9 +324,11 @@ def save_stats ar
 end
 
 def track_all
+  track_unfollowers
+
   fo = @followers_ids.to_a
   fr = @friends_ids.to_a
-  un = track_unfollowers().to_a
+  un = @unfollowers_ids.to_a
   
   save_data([Time.now, {:followers=>fo, :friends=>fr, :unfollowers=>un}])
   save_stats([Time.now, {:followers=>(fo.length-@old_fo_n), :friends=>(fr.length-@old_fr_n), :unfollowers=>un.length}])
