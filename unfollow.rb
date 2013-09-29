@@ -1,4 +1,5 @@
 require 'yaml'
+require 'timeout'
 
 require 'rubygems'
 require 'oauth'
@@ -161,16 +162,6 @@ def load_followers_ids
   d "Loaded #{@followers_ids.length} followers from file"
 end
 
-def get_ids of_which
-  if(of_which=="friends") then
-    get_friends_ids
-  elsif(of_which=="followers") then
-    get_followers_ids
-  else
-    e "get_ids called with a strange parameter: '#{of_which}'"
-  end
-end
-
 def load_old_data
   if File.exists?@dataFile then
     data = YAML.load_file(@dataFile)[1]
@@ -199,23 +190,21 @@ def time2ago t
   return s.chop
 end
 
-# if fr is "fr" then retrieve friends, else followers
-def check_cache fr
-  if(@cache==false) then
-    d "Cache disabled. Getting new data."
-    get_ids fr
+def check_cache
+  if(@cache==false or File.exists?(@dataFile)==false) then
+    d "Cache disabled or '#{@dataFile}' not found. Getting new data."
+    get_friends_ids
+    get_followers_ids
     return
   end
-  if(File.exists?@dataFile)==false then
-    get_ids fr
+  date=YAML.load_file(@dataFile)[0]
+  if ((Time.now-date)>@cache_time) then
+    d "Cache copy of '#{@dataFile}' expired #{time2ago(Time.now-date)} ago"
+    get_friends_ids
+    get_followers_ids
   else
-    date=YAML.load_file(@dataFile)[0]
-    if ((Time.now-date)>@cache_time) then
-      d "Cache copy of '#{@dataFile}' expired #{time2ago(Time.now-date)} ago"
-      get_ids fr
-    else
-       if(fr=="friends") then load_friends_ids else load_followers_ids end
-    end
+    load_friends_ids
+    load_followers_ids
   end
 end
 
@@ -348,8 +337,14 @@ begin
     start
     config_twitter
     load_old_data
-    check_cache "friends"
-    check_cache "followers"
+    begin
+      timeout(20) do
+        check_cache
+      end
+    rescue Timeout::Error=>ex
+      e "Timeout. Retrying..."
+      retry
+    end
     track_all
     remove
   rescue Twitter::Error::TooManyRequests=>ex
