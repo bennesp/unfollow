@@ -22,11 +22,8 @@ Script is very configurable, this is a default example of a settings.rb:
     @cache_time = 600
 
     @use_colors = true
-    @track_unfollower = true
 
-    @DEBUG = true
-    @WARNINGS = true
-    @ERRORS = true
+    @verbose = 2
 
     # change these with your whitelisted users
     @whitelist = ["alecover", "marcobianchiweb"]
@@ -39,27 +36,29 @@ First you must have ruby, and installed this gems:
 
 * oauth
 * twitter
+
 * yaml
+* timeout
 
 ### Ubuntu and Debian-based
 
 On Ubuntu simply run
 
-` $ sudo apt-get install ruby`
+`$ sudo apt-get install ruby`
 
-` $ sudo gem install oauth twitter yaml`
+`$ sudo gem install oauth twitter`
 
 ### Othres Linux Distros
 
 Install ruby and gem with your package manager or from source, and run from root 
-` # gem install oauth twitter yaml `
+`# gem install oauth twitter`
 
 ### Windows
 
 On Windows
 
 * Download ruby from http://rubyinstaller.org/
-* Run from cmd.exe with administrator rights: ` > gem install oauth twitter yaml  `
+* Run from cmd.exe with administrator rights: `> gem install oauth twitter`
 
 Run!
 ---
