@@ -304,11 +304,12 @@ def save_data ar
 end
 
 def save_stats ar
-  if(@stats) then
-    File.open @statsFile, "r+" do |fi|
-      fi.read
-      fi.puts YAML::dump ar
-    end
+  if(File.exists?(@statsFile)==false) then
+    File.open @statsFile, "w" do end
+  end
+  File.open @statsFile, "r+" do |fi|
+    fi.read
+    fi.puts YAML::dump ar
   end
 end
 
@@ -342,7 +343,8 @@ begin
         check_cache
       end
     rescue Timeout::Error=>ex
-      e "Timeout. Retrying..."
+      e "Timeout. Retrying in 5 secs..."
+      sleep 5
       retry
     end
     track_all

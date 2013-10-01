@@ -1,6 +1,9 @@
 0.4.2b
 ---
+
 * Improved cache and get/load data system
+* Added timeout of 20 seconds max to retrieve friends and followers IDs
+* Stats system terminated, now it tracks all new followers, friends and unfollowers in the @statsFile (default 'stats.yaml')
 
 0.4.1b
 ---
