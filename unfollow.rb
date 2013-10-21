@@ -323,7 +323,7 @@ def track_all
   un = @unfollowers_ids.to_a
   
   save_data([Time.now, {:followers=>fo, :friends=>fr, :unfollowers=>un}])
-  save_stats([Time.now, {:followers=>(fo.length-@old_fo_n), :friends=>(fr.length-@old_fr_n), :unfollowers=>un.length}])
+  if(@cache==false) then save_stats([Time.now, {:followers=>(fo.length-@old_fo_n), :friends=>(fr.length-@old_fr_n), :unfollowers=>un.length}]) end
 
   if un.length>0 then
     puts "Show names of #{un.length} unfollowers? [Yes/No]"
